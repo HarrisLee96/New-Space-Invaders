@@ -1,0 +1,788 @@
+<html>
+    <canvas id="canv" width="800" height="600"></canvas>
+    
+    <script>
+        
+        var g_canvas = document.getElementById("canv");
+        var g_ctx = g_canvas.getContext("2d");
+        
+        var activeScreen = 1;
+        var sound = true;
+        
+        var g_mousePosX = 0;
+        var g_mousePosY = 0;
+        
+        var g_FrameRate = 30;
+        var g_TimeInterval = 1000/g_FrameRate;
+        var g_FrameCounter = 0;
+        
+        
+        class c_button
+            {
+                constructor(l_text,l_xPos,l_yPos,l_w,l_h)
+                {
+                    this.text = l_text;
+                    this.xPos = l_xPos;
+                    this.yPos = l_yPos;
+                    this.width = l_w;
+                    this.height = l_h;
+                }
+
+                m_buttonDetails(l_ctx)
+                {
+                    l_ctx.fillStyle = "white";
+                    l_ctx.textAlign = "center";
+                    l_ctx.font = "25px Arial";
+                    l_ctx.fillText(this.text,this.xPos+(this.width/2),this.yPos+((this.height/2) + 6));
+                    l_ctx.strokeStyle = "white";
+                    l_ctx.strokeRect(this.xPos,this.yPos,this.width,this.height);
+
+                }
+
+            }
+        
+        class c_box
+            {
+                constructor(l_xPosBox,l_yPosBox,l_sizeBox)
+                {
+                    this.xPosBox = l_xPosBox;
+                    this.yPosBox = l_yPosBox;
+                    this.sizeBox = l_sizeBox;
+                    this.colorBox = "white";
+                }
+
+                m_drawSquare(l_ctx)
+                {
+                    l_ctx.fillStyle = this.colorBox;
+                    l_ctx.fillRect(this.xPosBox , this.yPosBox , this.sizeBox, this.sizeBox);
+                }
+            }
+        
+        class c_grid
+            {
+                constructor(l_xPosGrid,l_yPosGrid,l_rowsGrid,l_coloumnsGrid,l_bitmapArray)
+                {
+                    this.xPosGrid = l_xPosGrid;
+                    this.yPosGrid = l_yPosGrid;
+                    this.BoxXPos = l_xPosGrid;
+                    this.BoxYPos = l_yPosGrid;
+                    this.rowCount = l_rowsGrid;
+                    this.columnCount = l_coloumnsGrid;
+                    this.bitmapArray = l_bitmapArray;
+                    this.boxSize = 3; //Changes the BOXSIZE
+                    this.boxObjArray = new Array(this.rowCount * this.columnCount);
+                    this.movespeedX = 15;
+                    this.movespeedY = 15;
+                    this.MoveLeft = 0;
+                    this.MoveRight = 0;
+                    this.MoveUp = 0;
+                    this.MoveDown = 0;
+                    this.alive = 1;
+                    
+                    
+                    for(var i = 0 ; i < this.rowCount*this.columnCount ; i++)
+                        {
+                            this.boxObjArray[i]= new c_box(this.BoxXPos , this.BoxYPos , this.boxSize , this.boxSize);
+                            this.BoxXPos += this.boxSize;
+                            
+                            if((i + 1)%this.columnCount == 0) //changed from 11 to this.colum count
+                                {
+                                    this.BoxYPos += this.boxSize;
+                                    this.BoxXPos = this.xPosGrid;
+                                }
+                        }
+                }
+
+                m_drawGrid(l_ctx)
+                {
+                    if(this.alive == 1)
+                        {
+                            for(var i = 0 ; i < this.bitmapArray.length; i++)
+                                {
+                                    if(this.bitmapArray[i] == 1)
+                                        {
+                                            this.boxObjArray[i].m_drawSquare(l_ctx);
+                                        }
+                                }
+                        }
+                    
+                }
+                
+                m_moveGrid()
+                {
+                    if(this.alive == 1)
+                        {
+                            if(this.MoveLeft == 1)
+                                {
+
+                                    for(var i = 0 ; i < this.bitmapArray.length ; i++)
+                                        {
+                                            this.boxObjArray[i].xPosBox -= this.movespeedX;
+                                        }
+
+                                }
+                            else if(this.MoveRight == 1)
+                                {
+
+                                    for(var i = 0 ; i < this.bitmapArray.length ; i++)
+                                        {
+                                            this.boxObjArray[i].xPosBox += this.movespeedX;
+                                        }
+                                }
+                            else if(this.MoveUp == 1)
+                                {
+
+                                    for(var i = 0 ; i < this.bitmapArray.length ; i++)
+                                        {
+                                            this.boxObjArray[i].yPosBox -= this.movespeedY;
+                                        }
+                                }
+                            else if(this.MoveDown == 1)
+                                {
+
+                                    for(var i = 0 ; i < this.bitmapArray.length ; i++)
+                                        {
+                                            this.boxObjArray[i].yPosBox += this.movespeedY;
+                                        }
+                                }
+                        }
+                    
+                    
+                }
+            }
+        
+        var g_AlienOneBitmapArrayA = [0,0,1,0,0,0,0,0,1,0,0,
+                                      0,0,0,1,0,0,0,1,0,0,0,
+                                      0,0,1,1,1,1,1,1,1,0,0,
+                                      0,1,1,0,1,1,1,0,1,1,0,
+                                      1,1,1,1,1,1,1,1,1,1,1,
+                                      1,0,1,1,1,1,1,1,1,0,1,
+                                      1,0,1,0,0,0,0,0,1,0,1,
+                                      0,0,0,1,1,0,1,1,0,0,0];
+        
+        var g_AlienOneBitmapArrayB = [0,0,1,0,0,0,0,0,1,0,0,
+                                      1,0,0,1,0,0,0,1,0,0,1,
+                                      1,0,1,1,1,1,1,1,1,0,1,
+                                      1,1,1,0,1,1,1,0,1,1,1,
+                                      1,1,1,1,1,1,1,1,1,1,1,
+                                      0,1,1,1,1,1,1,1,1,1,0,
+                                      0,0,1,0,0,0,0,0,1,0,0,
+                                      0,1,0,0,0,0,0,0,0,1,0];
+        
+        var g_AlienTwoBitmapArrayA = [0,0,0,0,1,1,1,1,0,0,0,0,
+                                      0,1,1,1,1,1,1,1,1,1,1,0,
+                                      1,1,1,1,1,1,1,1,1,1,1,1,
+                                      1,1,1,0,0,1,1,0,0,1,1,1,
+                                      1,1,1,1,1,1,1,1,1,1,1,1,
+                                      0,0,0,1,1,0,0,1,1,0,0,0,
+                                      0,0,1,1,0,0,0,0,1,1,0,0,
+                                      1,1,0,0,0,0,0,0,0,0,1,1];
+        
+        var g_AlienTwoBitmapArrayB = [0,0,0,0,1,1,1,1,0,0,0,0,
+                                      0,1,1,1,1,1,1,1,1,1,1,0,
+                                      1,1,1,1,1,1,1,1,1,1,1,1,
+                                      1,1,1,0,0,1,1,0,0,1,1,1,
+                                      1,1,1,1,1,1,1,1,1,1,1,1,
+                                      0,0,0,1,1,0,0,1,1,0,0,0,
+                                      0,0,1,0,0,0,0,0,0,1,0,0,
+                                      0,0,0,1,0,0,0,0,1,0,0,0];
+        
+        var g_AlienThreeBitmapArrayA = [0,0,0,1,1,0,0,0,
+                                        0,0,1,1,1,1,0,0,
+                                        0,1,1,1,1,1,1,0,
+                                        1,1,0,1,1,0,1,1,
+                                        1,1,1,1,1,1,1,1,
+                                        0,0,1,0,0,1,0,0,
+                                        0,1,0,1,1,0,1,0,
+                                        1,0,1,0,0,1,0,1];
+        
+        var g_AlienThreeBitmapArrayB = [0,0,0,1,1,0,0,0,
+                                        0,0,1,1,1,1,0,0,
+                                        0,1,1,1,1,1,1,0,
+                                        1,1,0,1,1,0,1,1,
+                                        1,1,1,1,1,1,1,1,
+                                        0,0,1,0,0,1,0,0,
+                                        0,1,0,0,0,0,1,0,
+                                        0,0,1,0,0,1,0,0];
+        
+        var g_MotherAlienBitmapArray = [0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,
+                                        0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,
+                                        0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,
+                                        0,1,1,0,1,1,0,1,1,0,1,1,0,1,1,0,
+                                        1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+                                        0,0,1,1,1,0,0,1,1,0,0,1,1,1,0,0,
+                                        0,0,0,1,0,0,0,0,0,0,0,0,1,0,0,0];
+        
+        var g_AlienExplosionBitMapArray = [1,0,0,1,0,0,0,1,0,0,1,
+                                           0,1,0,0,1,0,1,0,0,1,0,
+                                           0,0,1,0,0,0,0,0,1,0,0,
+                                           1,1,0,0,0,0,0,0,0,1,1,
+                                           0,0,1,0,0,0,0,0,1,0,0,
+                                           0,1,0,0,1,0,1,0,0,1,0,
+                                           1,0,0,1,0,0,0,1,0,0,1];
+        
+        var g_PlayerBitmapArray = [0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,
+                                   0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,
+                                   0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,
+                                   0,1,1,1,1,1,1,1,1,1,1,1,1,1,0,
+                                   1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+                                   1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+                                   1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+                                   1,1,1,1,1,1,1,1,1,1,1,1,1,1,1];
+        
+        var g_bulletBitmapArray = [1,
+                                   1,
+                                   1];
+        
+        var g_bunkerSquareBitmapArray = [1,1,1,1,1,1,1,1,
+                                         1,1,1,1,1,1,1,1,
+                                         1,1,1,1,1,1,1,1,
+                                         1,1,1,1,1,1,1,1,
+                                         1,1,1,1,1,1,1,1,
+                                         1,1,1,1,1,1,1,1,
+                                         1,1,1,1,1,1,1,1,
+                                         1,1,1,1,1,1,1,1];
+        
+        
+        
+        
+        var g_MotherAlien;
+        var g_ExplosionAlien;
+        var g_Player;
+        //var g_bullet;
+        
+        
+        var g_StartButton;
+        var g_SettingsButton;
+        var g_SoundButton;
+        var g_BackButton;
+        var g_PauseButton;
+        var g_QuitGame;
+        var g_ContinueButton;
+        var g_FrameCounter = 0;
+        
+        function f_intMenu()
+        {
+            g_StartButton = new c_button("Start Game" , 290 , 250 , 200 , 40);
+            g_SettingsButton = new c_button("Settings" , 290 , 350 , 200 , 40);
+            g_SoundButton = new c_button("Sound" , 320 , 250 , 100 , 40);
+            g_BackButton = new c_button("Back" , 50 , 50 , 100 , 40);
+            g_PauseButton = new c_button("Pause" , 50 , 50 , 100 , 40);
+            g_QuitGame = new c_button("Quit Game" , 270 , 270 , 200 , 40);
+            g_ContinueButton = new c_button("Continue" , 270 , 350 , 200 , 40);
+            
+        }
+        
+        function f_intGameplayObjects()
+        {
+            
+            g_MotherAlien = new c_grid(850,100,7,16,g_MotherAlienBitmapArray);
+            g_MotherAlien.MoveLeft = 1;
+            g_Player = new c_grid(200,550,8,15,g_PlayerBitmapArray);
+            
+            f_alienGrid();
+            f_bunkerGrid();
+            
+        }
+        
+        function f_drawGameplayObjects()
+        {
+            
+            if(activeScreen == 2)
+                {
+                    
+                    g_Player.m_drawGrid(g_ctx);
+                    g_MotherAlien.m_drawGrid(g_ctx);
+                    f_drawAliens();
+                    f_drawBunker();
+                }
+            
+        }
+        
+        var g_AlienArray = new Array(55);
+        
+        function f_alienGrid()
+        {
+            
+            var l_tempX = 100;
+            var l_tempY = 150;
+            var l_gap = 45;
+            var l_gapY = 30;
+            var l_dynamicX = l_tempX;
+            var l_dynamicY = l_tempY;
+            var l_SelectedBitmap;
+            var l_GridRow,l_GridColumn = 0;
+            
+            for(var i = 0 ; i < g_AlienArray.length ; i++)
+                {
+                    
+                    if( i <= 21 )
+                        {
+                            l_SelectedBitmap = g_AlienOneBitmapArrayA;
+                            l_GridRow = 8;
+                            l_GridColumn = 11;
+                        }
+                    if( i > 21 && i <= 43 )
+                        {
+                            l_SelectedBitmap = g_AlienTwoBitmapArrayA;
+                            l_GridRow = 8;
+                            l_GridColumn = 12;
+                        }
+                    if( i > 43 && i <= 54 )
+                        {
+                            l_SelectedBitmap = g_AlienThreeBitmapArrayA;
+                            l_GridRow = 8;
+                            l_GridColumn = 8;
+                        }
+                    
+                    g_AlienArray[i]= new c_grid(l_dynamicX,l_dynamicY,l_GridRow,l_GridColumn,l_SelectedBitmap);
+                    g_AlienArray[i].MoveRight = 1;
+                    l_dynamicX += l_gap;
+                    
+                    if((i + 1)%11 == 0)
+                        {
+                            l_dynamicY += l_gapY;
+                            l_dynamicX = l_tempX;
+                        }
+                }
+            
+        }
+        
+        var g_bunkerArrayOne = new Array(5);
+        var g_bunkerArrayTwo = new Array(5);
+        var g_bunkerArrayThree = new Array(5);
+        var g_bunkerArrayFour = new Array(5);
+        
+        function f_bunkerGrid()
+        {
+            var l_tempSquareX = [130,280,430,580];
+            var l_tempSquareY = [450,450,450,450];
+            var l_squareXPos = [l_tempSquareX[0],l_tempSquareX[1],l_tempSquareX[2],l_tempSquareX[3]];
+            var l_squareYPos = [l_tempSquareY[0],l_tempSquareY[1],l_tempSquareY[2],l_tempSquareY[3]];
+            var l_squareGap = 24;
+            var l_squareSelectedBitmap;
+            var l_squareGridRow,l_squareGridColumn = 0;
+            
+            for(var i = 0 ; i < g_bunkerArrayOne.length ; i++)
+                {
+                    
+                    if( i <= g_bunkerArrayOne.length )
+                        {
+                            l_squareSelectedBitmap = g_bunkerSquareBitmapArray;
+                            l_squareGridRow = 8;
+                            l_squareGridColumn = 8;
+                        }
+                    
+                    g_bunkerArrayOne[i] = new c_grid(l_squareXPos[0] , l_squareYPos[0] , l_squareGridRow , l_squareGridColumn , l_squareSelectedBitmap);
+                    l_squareXPos[0] += l_squareGap;
+                    
+                    if((i + 1) == 3 )
+                        {
+                            l_squareYPos[0] += l_squareGap;
+                            l_squareXPos[0] = l_tempSquareX[0];
+                        }
+                    if((i + 1) == 4)
+                        {
+                            l_squareXPos[0] = l_squareXPos[0] + l_squareGap;
+                        }
+                
+                    
+                    if( i <= g_bunkerArrayTwo.length )
+                        {
+                            l_squareSelectedBitmap = g_bunkerSquareBitmapArray;
+                            l_squareGridRow = 8;
+                            l_squareGridColumn = 8;
+                        }
+                    
+                    g_bunkerArrayTwo[i] = new c_grid(l_squareXPos[1] , l_squareYPos[1] , l_squareGridRow , l_squareGridColumn , l_squareSelectedBitmap);
+                    l_squareXPos[1] += l_squareGap;
+                    
+                    if((i + 1) == 3 )
+                        {
+                            l_squareYPos[1] += l_squareGap;
+                            l_squareXPos[1] = l_tempSquareX[1];
+                        }
+                    if((i + 1) == 4)
+                        {
+                            l_squareXPos[1] = l_squareXPos[1] + l_squareGap;
+                        }
+               
+                    
+                    if( i <= g_bunkerArrayThree.length )
+                        {
+                            l_squareSelectedBitmap = g_bunkerSquareBitmapArray;
+                            l_squareGridRow = 8;
+                            l_squareGridColumn = 8;
+                        }
+                    
+                    g_bunkerArrayThree[i] = new c_grid(l_squareXPos[2] , l_squareYPos[2] , l_squareGridRow , l_squareGridColumn , l_squareSelectedBitmap);
+                    l_squareXPos[2] += l_squareGap;
+                    
+                    if((i + 1) == 3 )
+                        {
+                            l_squareYPos[2] += l_squareGap;
+                            l_squareXPos[2] = l_tempSquareX[2];
+                        }
+                    if((i + 1) == 4)
+                        {
+                            l_squareXPos[2] = l_squareXPos[2] + l_squareGap;
+                        }
+                
+                    
+                    if( i <= g_bunkerArrayFour.length )
+                        {
+                            l_squareSelectedBitmap = g_bunkerSquareBitmapArray;
+                            l_squareGridRow = 8;
+                            l_squareGridColumn = 8;
+                        }
+                    
+                    g_bunkerArrayFour[i] = new c_grid(l_squareXPos[3] , l_squareYPos[3] , l_squareGridRow , l_squareGridColumn , l_squareSelectedBitmap);
+                    l_squareXPos[3] += l_squareGap;
+                    
+                    if((i + 1) == 3 )
+                        {
+                            l_squareYPos[3] += l_squareGap;
+                            l_squareXPos[3] = l_tempSquareX[3];
+                        }
+                    if((i + 1) == 4)
+                        {
+                            l_squareXPos[3] = l_squareXPos[3] + l_squareGap;
+                        }
+                }
+        }
+        
+        function f_drawBunker()
+        {
+            for(var i = 0 ; i < g_bunkerArrayOne.length ; i++)
+                {
+                    g_bunkerArrayOne[i].m_drawGrid(g_ctx);
+                    g_bunkerArrayTwo[i].m_drawGrid(g_ctx);
+                    g_bunkerArrayThree[i].m_drawGrid(g_ctx);
+                    g_bunkerArrayFour[i].m_drawGrid(g_ctx);
+                }
+            
+        }
+        
+        function f_drawAliens()
+        {
+            
+            for(var i = 0 ; i < g_AlienArray.length ; i++)
+                {
+                    g_AlienArray[i].m_drawGrid(g_ctx);
+                }
+        }
+        
+        function f_drawMenu()
+        {
+            
+            
+            if(activeScreen == 1)
+                {
+                    
+                    g_ctx.fillStyle = "white";
+                    g_ctx.textAlign = "center";
+                    g_ctx.font = "50px Arial";
+                    g_ctx.fillText("Snake Game 2" , 400 , 150);
+                
+                    g_StartButton.m_buttonDetails(g_ctx);
+                    g_SettingsButton.m_buttonDetails(g_ctx);
+                }
+            
+            if(activeScreen == 2)
+                {
+                    
+                    g_PauseButton.m_buttonDetails(g_ctx);
+                    
+                }
+            
+            if(activeScreen == 3)
+                {
+                    
+                    g_BackButton.m_buttonDetails(g_ctx);
+                    g_SoundButton.m_buttonDetails(g_ctx);
+                    
+                }
+            
+            if(activeScreen == 4)
+                {
+                    
+                    g_QuitGame.m_buttonDetails(g_ctx);
+                    g_ContinueButton.m_buttonDetails(g_ctx);
+                    
+                }
+            
+            
+        }
+        
+        
+        var g_AlienMoveDirection = 1;
+        var g_NumberOfStepsMoved = 0;
+        var g_StepsConstant = 10;
+        var g_StepsConstantDown = 11;
+        var timerReset = 0;
+        
+        
+        function f_alienCollion()
+        {
+            
+            if(g_NumberOfStepsMoved == g_StepsConstant)
+            {
+                
+                for(var i = 0 ; i < g_AlienArray.length ; i++)
+                    {
+                        g_AlienArray[i].MoveDown = 1;
+                        g_AlienArray[i].MoveRight = 0;
+                        g_AlienArray[i].MoveLeft = 0;
+                    }
+            }
+            
+            if(g_NumberOfStepsMoved == g_StepsConstantDown)
+            {
+                g_NumberOfStepsMoved = 0;
+                timerReset = 1;
+            
+            }
+            
+            if(timerReset == 1)
+                {
+                    for(var i = 0 ; i < g_AlienArray.length ; i++)
+                        {
+                            g_AlienArray[i].MoveDown = 0;
+                            g_AlienArray[i].MoveLeft = 1;
+                            //CHECK THIS
+                            if(g_AlienArray[i].MoveLeft == 0)
+                                {
+                                    g_AlienArray[i].MoveRight = 1;
+                                }
+                            
+                        }
+                }
+            
+            /*if(g_AlienArray[10].boxObjArray[10].xPosBox >= 750)
+            {
+                
+                for(var i = 0 ; i < g_AlienArray.length ; i++)
+                    {
+                        g_AlienArray[i].MoveDown = 1;
+                        g_AlienArray[i].MoveRight = 0;
+                        g_AlienArray[i].MoveLeft = 0;
+                        
+                    }
+            }*/
+            
+            
+        }
+        
+        function f_playerCollision()
+        {
+            
+            if(g_Player.boxObjArray[0].xPosBox <= 50 && g_Player.MoveLeft == 1)
+            {
+                g_Player.MoveLeft = 0;
+            }
+            
+             if(g_Player.boxObjArray[14].xPosBox >= 750 && g_Player.MoveRight == 1)
+            {
+                g_Player.MoveRight = 0;
+            }   
+            
+            
+        }
+        
+        function f_moveMother()
+        {
+            g_MotherAlien.m_moveGrid();
+        }
+        
+        function f_KeyDownEventHandler(l_eventData)
+        {
+            
+            if(l_eventData.keyCode==37) //LeftArrowKey
+                {
+                    g_Player.MoveLeft = 1;
+                }
+            
+            if(l_eventData.keyCode==38) //UpArrowKey
+                {
+                    
+                }
+            
+            if(l_eventData.keyCode==39) //RightArrowKey
+                {
+                    g_Player.MoveRight = 1;
+                }
+            if(l_eventData.keyCode==40) //DownArrowKey
+                {
+                    
+                }
+            if(l_eventData.keyCode==32) //Spacebar
+                {
+                    //g_bullet.shoot = 1;
+                }
+        }
+        
+        function f_KeyUpEventHandler(l_eventData)
+        {
+            
+            if(l_eventData.keyCode==37) //LeftArrowKey
+                {
+                    g_Player.MoveLeft = 0;
+                }
+            
+            if(l_eventData.keyCode==38) //UpArrowKey
+                {
+                    
+                }
+            
+            if(l_eventData.keyCode==39) //RightArrowKey
+                {
+                    g_Player.MoveRight = 0;
+                }
+            if(l_eventData.keyCode==40) //DownArrowKey
+                {
+                    
+                }
+            if(l_eventData.keyCode==32) //Spacebar
+                {
+                    
+                }
+        }
+        
+        function f_mouseDown(l_event)
+        {
+
+            g_mousePosX = l_event.clientX;
+            g_mousePosY = l_event.clientY;
+            
+            
+            if(activeScreen == 1)
+                {
+                    if(g_mousePosX >= g_StartButton.xPos && g_mousePosX <= (g_StartButton.xPos + g_StartButton.width) && g_mousePosY >= g_StartButton.yPos && g_mousePosY <= (g_StartButton.yPos + g_StartButton.height))
+                        {
+                            activeScreen = 2;
+                        }
+                    if(g_mousePosX >= g_SettingsButton.xPos && g_mousePosX <= (g_SettingsButton.xPos + g_SettingsButton.width) && g_mousePosY >= g_SettingsButton.yPos && g_mousePosY <= (g_SettingsButton.yPos + g_SettingsButton.height))
+                        {
+                            activeScreen = 3;
+                        }
+                }
+            
+            if(activeScreen == 2)
+                {
+                    if(g_mousePosX >= g_PauseButton.xPos && g_mousePosX <= (g_PauseButton.xPos + g_PauseButton.width) && g_mousePosY >= g_PauseButton.yPos && g_mousePosY <= (g_PauseButton.yPos + g_PauseButton.height))
+                        {
+                            activeScreen = 4;
+                        }
+                }
+            
+            if(activeScreen == 3)
+                {
+                    
+                    if(g_mousePosX >= g_SoundButton.xPos && g_mousePosX <= (g_SoundButton.xPos + g_SoundButton.width) && g_mousePosY >= g_SoundButton.yPos && g_mousePosY <= (g_SoundButton.yPos + g_SoundButton.height))
+                        {
+                            console.log("Sound is now set to true");
+                            alert("Sound is now set to TRUE");
+                        }
+                        
+                    
+                    if(g_mousePosX >= g_BackButton.xPos && g_mousePosX <= (g_BackButton.xPos + g_BackButton.width) && g_mousePosY >= g_BackButton.yPos && g_mousePosY <= (g_BackButton.yPos + g_BackButton.height))
+                        {
+                            activeScreen = 1;
+                        }
+                }
+            
+            if(activeScreen == 4)
+                {
+                    if(g_mousePosX >= g_QuitGame.xPos && g_mousePosX <= (g_QuitGame.xPos + g_QuitGame.width) && g_mousePosY >= g_QuitGame.yPos && g_mousePosY <= (g_QuitGame.yPos + g_QuitGame.height))
+                        {
+                            activeScreen = 1;
+                        }
+                    if(g_mousePosX >= g_ContinueButton.xPos && g_mousePosX <= (g_ContinueButton.xPos + g_ContinueButton.width) && g_mousePosY >= g_ContinueButton.yPos && g_mousePosY <= (g_ContinueButton.yPos + g_ContinueButton.height))
+                        {
+                            activeScreen = 2;
+                        }
+                }
+        }
+        
+         function f_ClearCanvas()
+        {
+            g_ctx.fillStyle="black";
+            g_ctx.fillRect(0,0,g_canvas.width,g_canvas.height);
+        }
+        
+        
+        function f_moveAliens()
+        {
+            g_FrameCounter++;
+            
+            if((g_FrameCounter % g_FrameRate) == 0)
+                {
+                    g_NumberOfStepsMoved++;
+                    console.log(g_NumberOfStepsMoved);
+                    
+                    
+                    for(var i = 0 ; i < g_AlienArray.length ; i++)
+                        {
+                            g_AlienArray[i].m_moveGrid();
+                        }
+                    
+                   /* if(g_AlienArray[0].MoveDown == 1)
+                       {
+                           console.log("collision 2");
+                            if(g_AlienMoveDirection == 1)
+
+                                {
+                                     for(var i = 0 ; i < g_AlienArray.length ; i++)
+                                            {
+                                                g_AlienArray[i].MoveDown = 0;
+                                                g_AlienArray[i].MoveRight = 0;
+                                                g_AlienArray[i].MoveLeft = 1;
+
+                                            }
+                                    g_AlienMoveDirection = - g_AlienMoveDirection;
+                                }
+                               else
+                               {
+                                   for(var i = 0 ; i < g_AlienArray.length ; i++)
+                                            {
+                                                g_AlienArray[i].MoveDown = 0;
+                                                g_AlienArray[i].MoveRight = 1;
+                                                g_AlienArray[i].MoveLeft = 0;
+
+                                            }
+                                    g_AlienMoveDirection = - g_AlienMoveDirection;
+                               }
+                       }*/
+                }
+        }
+        
+        function f_GameLogic()
+        {
+             if(activeScreen == 2)
+                 {
+                    f_playerCollision();
+                    g_Player.m_moveGrid();
+                    f_alienCollion();
+                    f_moveAliens();
+                    f_moveMother();
+                    //g_bullet.m_shoot();
+                 }
+        }
+                
+        function f_gameLoop()
+        {
+            f_GameLogic();
+            f_ClearCanvas();
+            f_drawMenu(g_ctx , activeScreen);
+            f_drawGameplayObjects(g_ctx);
+        }
+        
+        f_intMenu();
+        f_intGameplayObjects();
+        var id = setInterval(f_gameLoop,g_TimeInterval);
+        document.addEventListener("mousedown",f_mouseDown);
+        document.addEventListener("keydown",f_KeyDownEventHandler)
+        document.addEventListener("keyup",f_KeyUpEventHandler)
+
+    </script>
+</html>
